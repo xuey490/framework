@@ -27,7 +27,7 @@
 ## 下载安装:
 - 本地环境:php8.1及以上，Redis，MySQL5.7, composer 2.x及以上
 - 在你项目根目录下运行： composer require xuey490/framework
-- 等待组件下载完毕，在根目录下：php vendor/bin/nova install (这个命名是复制必要的配置文件到根目录)
+- 等待组件下载完毕，在根目录下：php vendor/bin/nova install (这个命令是复制必要的配置文件到根目录)
 
 ## 应用文档
 强烈推荐Zread.Ai，感谢他们提供项目文档分析生成。https://zread.ai/xuey490/novaphp
