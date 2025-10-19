@@ -42,22 +42,19 @@ class ScriptHandler
     {
         $filesystem = new Filesystem();
 
-        // 获取当前包的根目录（关键！）
-        $packageDir = dirname(__DIR__, 2); // 假设类在 framework/Composer/
+        // 获取当前包（framework）的根目录
+        // __DIR__ = .../vendor/xuey490/framework/src/Composer
+        $packageRoot = dirname(__DIR__, 2); // 回退到 vendor/xuey490/framework
 
-        // 目标：项目根目录（即 vendor 的父目录）
-        $projectRoot = dirname(__DIR__, 4); // vendor/xuey490/framework/ → 退回4层
+        // 源：包内的 config 目录
+        $sourceConfig = $packageRoot . '/config';
 
-        // 或更安全的方式：从 composer.json 推断
-        // 但简单起见，我们假设从 bin/nova 调用时，当前工作目录是项目根目录
-        $projectRoot = getcwd();
+        // 目标：用户项目根目录下的 config（因为脚本从项目根目录调用）
+        $targetConfig = getcwd() . '/config';
 
-        $configSource = $packageDir . '/config';
-        $configTarget = $projectRoot . '/config';
-
-        if (!$filesystem->exists($configTarget)) {
-            $filesystem->mirror($configSource, $configTarget);
-            echo "Copied config files to: $configTarget\n";
+        if (!$filesystem->exists($targetConfig)) {
+            $filesystem->mirror($sourceConfig, $targetConfig);
+            echo "Copied config files to: $targetConfig\n";
         } else {
             echo "Config directory already exists. Skipping.\n";
         }
