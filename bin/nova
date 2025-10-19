@@ -7,8 +7,9 @@ if (PHP_SAPI !== 'cli') {
 
 // 项目根目录 = vendor/bin 的上两级
 $projectRoot = dirname(__DIR__, 2);
-$autoload = $projectRoot . '/vendor/autoload.php';
-
+//echo $projectRoot."\r\n";
+$autoload = $projectRoot . '/../../vendor/autoload.php';
+//echo $autoload."\r\n";
 if (!file_exists($autoload)) {
     echo "Error: Composer autoloader not found at $autoload\n";
     echo "Please run this command from your project root directory after 'composer install'.\n";
