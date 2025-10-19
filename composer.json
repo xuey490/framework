@@ -57,10 +57,10 @@
     },
     "autoload": {
         "psr-4": {
-            "Framework\\": "framework/"
+            "Framework\\": "src/"
         },
         "files": [
-            "framework/helpers.php"
+            "src/helpers.php"
         ]
     },
     "autoload-dev": {
