@@ -34,7 +34,7 @@ NovaPHP 是一款轻量级，强大，快速，简单，安全的php框架。
 
 
 ## 应用文档
-强烈推荐Zread.Ai，感谢他们提供项目文档分析生成。https://zread.ai/xuey490/novaphp
+强烈推荐Zread.Ai，感谢他们提供项目文档分析生成。 https://zread.ai/xuey490/framework
 
 ## 测试路由:
 所有的控制器，都在App/controllers, 按http://localhost:8000/控制器名/动作名  访问，如下面
