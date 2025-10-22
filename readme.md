@@ -2,10 +2,10 @@
 
 
 
-  [![logo](https://raw.githubusercontent.com/xuey490/framework/refs/heads/1.0.0/logo.png "logo")](https://github.com/xuey490/framework "logo")
+[![](https://raw.githubusercontent.com/xuey490/novaphp/refs/heads/main/mmexport1761113888445.png)](https://github.com/xuey490/framework)
 
 ## 简介:
-NovaPHP 是一款轻量级，强大，快速，简单，安全的php框架。
+NovaFrame 是一款轻量级，强大，快速，简单，安全的php框架。
 
 ## 核心特性
 🚀 性能与安全
