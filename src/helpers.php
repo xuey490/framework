@@ -155,6 +155,12 @@ function database_path($path = '')
     return base_path('database') . ($path ? '/' . $path : '');
 }
 
+function app_path($path = '')
+{
+    return base_path('app') . ($path ? '/' . $path : '');
+}
+
+
 function env($key, $default = null)
 {
     $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
@@ -186,6 +192,7 @@ function env($key, $default = null)
 }
 
 if (! function_exists('config')) {
+
     function config(?string $key = null, $default = null)
     {
         static $config = null;
@@ -214,6 +221,9 @@ if (! function_exists('config')) {
     }
 }
 
+	
+
+
 function generateUuid(): string
 {
     // 使用 ramsey/uuid
@@ -238,14 +248,41 @@ function current_locale(): string
     return app('translator')->getLocale();
 }
 
-if (! function_exists('view')) {
+
+if (!function_exists('view')) {
+    /**
+     * 渲染 Twig 模板（简化版，兼容现有逻辑）
+     * @param string $template 模板路径（支持不带后缀，自动补充 .html.twig）
+     * @param array $data 模板变量
+     * @return string 渲染后的 HTML
+     * @throws \RuntimeException 模板渲染失败时抛出异常
+     */
     function view(string $template, array $data = []): string
     {
-        $twig     = app('view');
-        $template = str_ends_with($template, '.html.twig') ? $template : $template . '.html.twig';
-        return $twig->render($template, $data);
+        try {
+            // 1. 从容器获取 Twig 实例（确保容器中已注册 'view' 服务为 Twig\Environment）
+            $twig = app('view');
+            
+            // 2. 自动补充模板后缀（兼容传入 'errors/debug' 或 'errors/debug.html.twig'）
+            if (!str_ends_with($template, '.html.twig')) {
+                $template .= '.html.twig';
+            }
+            
+            // 3. 渲染模板（传递变量，Twig 会自动解析 {{ 变量名 }}）
+            return $twig->render($template, $data);
+        } catch (\Twig\Error\LoaderError $e) {
+            throw new \RuntimeException("模板文件未找到：{$template}（错误：{$e->getMessage()}）", 0, $e);
+        } catch (\Twig\Error\RuntimeError $e) {
+            throw new \RuntimeException("模板渲染运行时错误：{$e->getMessage()}", 0, $e);
+        } catch (\Twig\Error\SyntaxError $e) {
+            throw new \RuntimeException("模板语法错误（行 {$e->getLine()}）：{$e->getMessage()}", 0, $e);
+        } catch (\Exception $e) {
+            throw new \RuntimeException("模板渲染失败：{$e->getMessage()}", 0, $e);
+        }
     }
 }
+
+
 
 // 缓存助手函数
 if (! function_exists('cache_get')) {
@@ -368,4 +405,69 @@ if (!function_exists('ThinkValidate')) {
 		}
 		return true;
 	}
+}
+
+/*
+	*模板助手函数
+	$username = 'guest';
+	$name = 'ThinkPHP Template Engine';
+	$version = '3.2.x';
+	$features = ['Fast', 'Simple', 'Powerful'];
+	$currentTime = time();
+	*return ThinkView('think/thinktemp', compact('username', 'name', 'version', 'features', 'currentTime'));
+*/
+
+function ThinkView($templateName, $data = []) 
+{
+    $template = app('thinkTemp');
+    $vars = array_merge(get_defined_vars()['data'] ?? [], $data);
+    $template->assign($vars);
+    return $template->fetch($templateName);
+}
+
+
+
+if (!function_exists('renders')) {
+    /**
+     * 渲染模板并自动分配当前作用域变量
+     *
+     * @param string $template 模板名，如 'user/profile'
+     * @param array $data      额外要 assign 的变量（会合并并覆盖）
+     * @param array $exclude   要排除的变量名（默认排除常见内部变量）
+     * @return string           渲染后的 HTML 内容
+     */
+    function renders(string $template, array $data = [], array $exclude = null)
+    {
+        // 获取当前作用域所有变量
+        $scopeVars = get_defined_vars();
+		
+				//print_r($scopeVars);
+
+        // 默认排除列表
+        $defaultExclude = ['scopeVars', 'template', 'data', 'exclude', 'args'];
+        $exclude = $exclude ?? $defaultExclude;
+
+        // 合并排除项，去重
+        $exclude = array_unique(array_merge($defaultExclude, $exclude));
+
+        // 过滤掉不需要的变量
+        $filtered = array_diff_key($scopeVars, array_flip($exclude));
+
+        // 合并作用域变量 + 手动传入的变量（后者优先级更高）
+        $assignData = array_merge($filtered, $data);
+
+        // 获取 ThinkPHP 模板引擎实例
+        $tpl = app('thinkTemp'); // 确保服务名为 'thinkTemp'，根据你的绑定调整
+
+        // 分配变量并渲染
+        $tpl->assign($assignData);
+
+        return $tpl->fetch($template);
+    }
+}
+
+// 事件分发函数
+function EventDispatch(object $event): object
+{
+    return app(\Framework\Event\Dispatcher::class)->dispatch($event);
 }
