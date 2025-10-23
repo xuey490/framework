@@ -34,7 +34,6 @@ class Container implements SymfonyContainerInterface
     // 静态变量，用于持有最终的容器实例（无论是新建的还是从缓存加载的）
     private static ?SymfonyContainerInterface $container = null;
 
-
     /**
      * 初始化容器。
      * - 在生产环境：尝试加载缓存。如果缓存不存在，则构建、编译并缓存。
@@ -45,7 +44,7 @@ class Container implements SymfonyContainerInterface
         if (self::$container !== null) {
             return;
         }
-		
+
         // 加载 .env 文件来获取环境变量
         $dotenv = new Dotenv();
         $dotenv->load(BASE_PATH . '/.env');
