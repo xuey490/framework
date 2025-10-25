@@ -9,6 +9,7 @@ NovaFrame 是一款轻量级，强大，快速，简单，安全的php框架。
 
 ## 核心特性
 🚀 性能与安全
+- 	Workerman启动器： 使用workerman和FPM双启动，一样的写法，超传统FPM 10倍以上的性能
 - 	Symfony 组件集成：利用 Symfony 7.x 组件实现 HTTP 基础、路由、依赖注入和缓存
 - 	轻量级设计：最小开销，快速请求处理
 - 	内置安全：CSRF保护、XSS过滤、速率限制和 IP阻断等中间件
