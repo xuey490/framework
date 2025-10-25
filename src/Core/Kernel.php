@@ -21,7 +21,6 @@ use Framework\Event\Dispatcher;
 use Framework\Event\ListenerScanner;
 use Framework\Core\Exception\Handler as ExceptionHandler;
 use Framework\Utils\Cookie;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class Kernel
@@ -58,7 +57,7 @@ class Kernel
         date_default_timezone_set($timezone);
 
         // 3. 初始化Cookie配置（强制检查安全密钥）
-        $this->initCookie();
+        //$this->initCookie();
 
         // 4. 注册事件监听器
         $this->registerEventListeners();
@@ -114,11 +113,11 @@ class Kernel
     private function setupExceptionHandling(): void
     {
         // 1. 注册异常处理器
-        $exceptionHandler = app('exception');// $this->container->get(ExceptionHandler::class);
+        $exceptionHandler = $this->container->get(ExceptionHandler::class);
         set_exception_handler(function (\Throwable $e) use ($exceptionHandler) {
             $exceptionHandler->report($e);
             $exceptionHandler->render($e);//->send();
-            //exit(1); // 异常后终止程序
+            exit(1); // 异常后终止程序
         });
 
         // 2. 注册错误处理器（将错误转为异常）
