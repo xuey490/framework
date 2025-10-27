@@ -43,6 +43,6 @@ NovaFrame 是一款轻量级，强大，快速，简单，安全的php框架。
 http://localhost:8000/user/add
 
 ## 鸣谢（站在巨人的肩膀上能看得更远）
-Workerman: https://www.workerman.net/ (开源高性能PHP应用容器)
-Symfony: https://www.symfony.com/ (PHP界的Spring，基石)
-Thinkphp: https://thinkphp.cn/ (中文互联网PHP框架顶流)
+- Workerman: https://www.workerman.net/ (开源高性能PHP应用容器)
+- Symfony: https://www.symfony.com/ (PHP界的Spring，基石)
+- Thinkphp: https://thinkphp.cn/ (中文互联网PHP框架顶流)
