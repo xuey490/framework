@@ -178,7 +178,7 @@ class FileUploader
 
         // 11. 构造 Web 路径（相对于 public/）
         $webPath = '/uploads/' . $datePath . '/' . $safeFilename;
-        $baseUrl = $_ENV['APP_URL'] ?? 'http://localhost';
+        $baseUrl =(string) $_ENV['APP_URL'] ?? 'http://localhost';
         $fullUrl = rtrim($baseUrl, '/') . $webPath;
 
         // 12. 返回结果
@@ -217,22 +217,9 @@ class FileUploader
         return match ($this->naming) {
             'uuid'     => generateUuid() . '.' . $extension, // Uuid::v4() . '.' . $extension,
             'datetime' => (new \DateTime())->format('Ymd_His_u') . '.' . $extension,
-            'md5'      => md5_file($file->getRealPath()) . '.' . $extension,
+            'md5'      => md5_file($originalName) . '.' . $extension,
             'original' => $name . '.' . $extension,
             default    => $name . '.' . $extension,
-        };
-    }
-
-    /* 遗弃 */
-    private function getExtensionFromMime(?string $mime): string
-    {
-        return match ($mime) {
-            'image/jpeg'      => 'jpg',
-            'image/png'       => 'png',
-            'image/gif'       => 'gif',
-            'application/pdf' => 'pdf',
-            'text/plain'      => 'txt',
-            default           => '',
         };
     }
 
