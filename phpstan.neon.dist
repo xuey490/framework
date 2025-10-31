@@ -1,0 +1,95 @@
+parameters:
+	level: 6
+	paths:
+		- src
+	bootstrapFiles:
+		- %currentWorkingDirectory%/phpstan_bootstrap.php	
+	cache:
+		nodesByStringCountMax: 128
+	checkUninitializedProperties: true
+	checkMissingCallableSignature: true
+	excludePaths:
+		- %currentWorkingDirectory%/*Test.php
+	ignoreErrors:
+		- '#Access to an undefined property [\S\s]+::\$[\S\s]+\.#'
+		- '#should return [\S\s]+ but returns Leevel\\Database\\Ddd\\Entity\.#'
+		- '#should return [\S\s]+ but returns Leevel\\Database\\Ddd\\Repository\.#'
+		- '#Property [\S\s]+ does not accept Leevel\\Database\\Ddd\\Entity\.#'
+		- '#Parameter [\S\s]+ of method [\S\s]+ expects [\S\s]+, [\S\s]+ given\.#'
+		- '#no value type specified in iterable type array\.#'
+		- '#no signature specified for Closure\.#'
+		- '#Cannot call method [\S\s]+ on Leevel\\Support\\[\S\s]+\|null\.#'
+		- '#Cannot call method withProps\(\) on [\S\s]+\|null\.#'
+		- '#Argument of an invalid type Leevel\\Support\\TypedIntArray\|null supplied for foreach, only iterables are supported\.#'
+		- '#Cannot access property \$[\S\s]+ on [\S\s]+\|null\.#'
+		- '#Cannot access offset [\S\s]+ on mixed\.#'
+		- '#Cannot cast mixed to[\S\s]+\.#'
+		- '#Cannot access property [\S\s]+ on mixed\.#'
+		- '#Cannot access offset [\S\s]+ on Leevel\\Di\\IContainer\.#'
+		- '#Method [\S\s]+ should return [\S\s]+ but returns object\.#'
+		- '#Unsafe usage of new static\(\)\.#'
+		- '#Method [\S\s]+ has parameter [\S\s]+ with no signature specified for callable\.#'
+		- '#Unsafe access to private property Leevel\\Database\\Ddd\\Entity::\$databaseConnect through static::\.#'
+		- '#Function [\S\s]+\\__\(\) has parameter \$data with no type specified\.#'
+		- '#Method Leevel\\Database\\Condition::[\S\s]+ has parameter \$cond with no type specified\.#'
+		- '#[\S\s]+has no value type specified in iterable type[\S\s]+\.#'
+		- '#Class [\S\s]+ has an uninitialized property [\S\s]+. Give it default value or assign it in the constructor\.#'
+		- '#Method Leevel[\S\s]+::connect\(\) has parameter \$arguments with no type specified\.#'
+		- '#Method Leevel[\S\s]+::reconnect\(\) has parameter \$arguments with no type specified\.#'
+		- '#Method Leevel[\S\s]+::makeConnect\(\) has parameter \$arguments with no type specified\.#'
+		- '#Cannot call method [\S\s]+\(\) on [\S\s]+\|null\.#'
+		- '#Method [\S\s]+\(\) should return [\S\s]+ but returns [\S\s]+\|null\.#'
+		- '#Method [\S\s]+\(\) has invalid return type [\S\s]+\.#'
+		- '#Property [\S\s]+\::\$[\S\s]+\ has unknown class [\S\s]+\ as its type\.#'
+		- '#Used function Swoole\\Coroutine\\run not found\.#'
+		- '#Access to constant [\S\s]+ on an unknown class Swoole\\Constant\.#'
+		- '#Call to an undefined method Leevel\\Server\\ProcessManager::addBatch\(\)\.#'
+		- '#Call to an undefined method Leevel\\Server\\ProcessManager::add\(\)\.#'
+		- '#Argument of an invalid type Swoole\\Table\|null supplied for foreach, only iterables are supported\.#'
+		- '#Constructor of class [\S\s]+ has an unused parameter [\S\s]+\.#'
+		- '#Parameter \$[\S\s]+ of method [\S\s]+\(\) has invalid type Swoole[\S\s]+\.#'
+		- '#[\S\s]+throws checked exception ValueError but it\''s missing from the PHPDoc @throws tag\.#'
+		- '#[\S\s]+Swoole[\S\s]+\.#'
+		- '#Trait [\S\s]+ is used zero times and is not analysed\.#'
+		- '#implements generic interface#'
+		- '#extends generic class#'
+		- '#with generic class#'
+		- '#always evaluate to true#'
+	exceptions:
+		uncheckedExceptionClasses:
+			- 'PHPStan\ShouldNotHappenException'
+			- 'Symfony\Component\Console\Exception\InvalidArgumentException'
+			- 'PHPStan\BetterReflection\SourceLocator\Exception\InvalidFileLocation'
+			- 'PHPStan\BetterReflection\SourceLocator\Exception\InvalidArgumentException'
+			- 'Symfony\Component\Finder\Exception\DirectoryNotFoundException'
+			- 'InvalidArgumentException'
+			- 'PHPStan\DependencyInjection\ParameterNotFoundException'
+			- 'PHPStan\Analyser\UndefinedVariableException'
+			- 'RuntimeException'
+			- 'Exception'
+			- 'Nette\Neon\Exception'
+			- 'Nette\Utils\JsonException'
+			- 'PHPStan\File\CouldNotReadFileException'
+			- 'PHPStan\File\CouldNotWriteFileException'
+			- 'PHPStan\Parser\ParserErrorsException'
+			- 'ReflectionException'
+			- 'Nette\Utils\AssertionException'
+			- 'PHPStan\File\PathNotFoundException'
+			- 'PHPStan\Broker\ClassNotFoundException'
+			- 'PHPStan\Broker\FunctionNotFoundException'
+			- 'PHPStan\Broker\ConstantNotFoundException'
+			- 'PHPStan\Reflection\MissingMethodFromReflectionException'
+			- 'PHPStan\Reflection\MissingPropertyFromReflectionException'
+			- 'PHPStan\Reflection\MissingConstantFromReflectionException'
+			- 'PHPStan\Type\CircularTypeAliasDefinitionException'
+			- 'PHPStan\Broker\ClassAutoloadingException'
+			- 'LogicException'
+			- 'TypeError'
+			- 'DivisionByZeroError'
+		check:
+			missingCheckedExceptionInThrows: true
+			tooWideThrowType: true
+	reportStaticMethodSignatures: true
+	tmpDir: %rootDir%/logs/phpstan
+	reportUnmatchedIgnoredErrors: false
+	treatPhpDocTypesAsCertain: false

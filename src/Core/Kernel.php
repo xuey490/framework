@@ -48,6 +48,15 @@ class Kernel
 
         // 1. 设置全局容器入口（供助手函数使用）
         App::setContainer($this->container);
+				
+		$sessionConfig = require $this->getProjectDir().'/config/session.php';
+		if (($sessionConfig['storage_type'] ?? 'redis') === 'file') {
+			$savePath = $sessionConfig['file_save_path'];
+			if (!is_dir($savePath)) {
+				mkdir($savePath, 0755, true);
+			}
+			ini_set('session.save_path', $savePath);
+		}
 		
         // $debug = app('config')->get('app.debug', false);
         //dump(app()->getServiceIds()); // 查看所有服务 ID
@@ -57,7 +66,7 @@ class Kernel
         date_default_timezone_set($timezone);
 
         // 3. 初始化Cookie配置（强制检查安全密钥）
-        //$this->initCookie();
+        $this->initCookie();
 
         // 4. 注册事件监听器
         $this->registerEventListeners();
@@ -162,4 +171,13 @@ class Kernel
     {
         return $this->booted;
     }
+	
+    /**
+     * 获取项目根目录
+     */
+    public function getProjectDir(): string
+    {
+        return dirname(__DIR__, 2); // 从 framework/Core 到项目根
+    }
+	
 }

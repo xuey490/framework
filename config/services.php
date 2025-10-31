@@ -14,7 +14,8 @@ use Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage;
 use Symfony\Component\HttpFoundation\Session\Storage\Handler\StrictSessionHandler;
 use Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler;
 
-use Valitron\Validator;
+
+#use Valitron\Validator;
 
 
 return function (ContainerConfigurator $configurator) {
@@ -56,12 +57,59 @@ return function (ContainerConfigurator $configurator) {
     // 示例：注册一个服务 如果你有 test.service 且要手动 get() 必须加public这一行
     $services->set('test', \stdClass::class)->public();
 	
+
+	/*
+    // 1. 配置 Redis 连接（与 Workerman 共用）
+	$services->set('redis.connection', \Redis::class)
+        ->call('connect', ['127.0.0.1', 6379]) // Redis 主机和端口
+        // 若有密码，添加以下行
+        // ->call('auth', ['your_redis_password'])
+        ->public(); // 允许外部访问
+	
+		
+
+    // 2. 配置 Redis Session 处理器
+    $services->set(RedisSessionHandler::class)
+        ->args([
+            service('redis.connection'), // 依赖注入 Redis 连接
+            [
+                'prefix' => 'redis_session_', // sf默认键前缀sf_s
+                'ttl' => 3600,         // 有效期（秒）	
+            ]
+        ]);
+	
+    // 4. 配置 Session 存储引擎
+    $services->set(NativeSessionStorage::class)
+        ->args([
+            [
+                // Session 基础配置（与 Cookie 相关）
+                'name' => 'PHPSESSID',                  // Session ID 的 Cookie 名称
+                'cookie_lifetime' => 3600,             // Cookie 有效期（秒）
+                'cookie_secure' => 'auto',              // 生产环境建议设为 true（仅 HTTPS 传输）
+                'cookie_samesite' => 'lax',             // 防止 CSRF 攻击
+                'cookie_path' => '/',                   // Cookie 生效路径
+                // 'cookie_domain' => '.yourdomain.com', // 多子域共享 Session 时配置
+                'gc_maxlifetime' => 3600,              // PHP 垃圾回收的过期时间（需与 ttl 一致）
+            ],
+            service(RedisSessionHandler::class) // 绑定 Redis 处理器
+        ])->public();
+
+    // 5. 注册 Session 服务
+    $services->set('session', Session::class)
+        ->args([service(NativeSessionStorage::class)])
+        ->public(); // 允许控制器直接获取
+	*/
+	
+	
+	
+
     // 加载session redis配置
     $redisConfig = require __DIR__ . '/redis.php';
     $sessionConfig = require __DIR__ . '/session.php';
 
     $storageType = $sessionConfig['storage_type'];
     $sessionOptions = $sessionConfig['options'];
+	$fileSavePath = $sessionConfig['file_save_path'] ?? sys_get_temp_dir();
 
     // === 1. 注册 Redis 客户端（仅当需要时）===
     $services->set('redis.client', \Redis::class)
@@ -74,24 +122,58 @@ return function (ContainerConfigurator $configurator) {
         // 使用 Redis 作为 handler
         $services->set('session.handler', RedisSessionHandler::class)
             //->args([new Reference('redis.client')]);
-            ->args([service('redis.client')]);
+            ->args([
+				service('redis.client'),
+				[
+					'prefix' => 'redis_session_', // 键前缀
+					'ttl' => 3600,         // 有效期（秒）	
+				]
+			])->public();
 
         $services->set('session.storage', NativeSessionStorage::class)
             //->args([$sessionOptions, new Reference('session.handler')])
             ->args([$sessionOptions, service('session.handler')])
             ->public();
     } else {
+
+		// 1. 定义底层自定义 handler，并调用 setSavePath
+		$services->set('session.handler.custom_file', \Framework\Utils\CustomFileSessionHandler::class)
+			->call('setSavePath', ['%kernel.project_dir%/storage/sessions'])
+			->call('setPrefix', [$sessionOptions['name']])
+			->public();
+
+		// 2. 用 StrictSessionHandler 包装它（不调用任何方法）
+		$services->set('session.handler', StrictSessionHandler::class)
+			->args([service('session.handler.custom_file')])
+			->public();
+
+		// 3. ✅ session.storage 必须是 NativeSessionStorage（实现了 SessionStorageInterface）
+		$services->set('session.storage', NativeSessionStorage::class)
+			->args([
+				$sessionOptions, // session options，如 ['name' => 'MYSESSID', 'cookie_lifetime' => 3600]
+				service('session.handler') // 传入 handler
+			])
+			->public();
+
+
+
+        // file 存储：不传 handler，使用原生文件存储
         // 默认：使用原生文件存储（PHP 默认）
+		/*
         $services->set('session.storage', NativeSessionStorage::class)
             ->args([$sessionOptions])
             ->public();
+		*/
     }
 
     // === 3. 注册 Session 服务 ===
     $services->set('session', Session::class)
-        ->args([new Reference('session.storage')])
+        ->args([service('session.storage')])
+        #->args([new Reference('session.storage')])
         ->public();
 
+	
+	
 	// 注册 ConfigLoader 为服务
 	$services->set('config' , \Framework\Config\ConfigLoader::class)	//$globalConfig = $this->container->get('config')->loadAll();
 		->args(['%kernel.project_dir%/config'])
@@ -185,10 +267,14 @@ return function (ContainerConfigurator $configurator) {
 		->autowire()
 		->autoconfigure()->public();
 		
+	//Cookie提示
+	$services->set(\Framework\Middleware\MiddlewareCookieConsent::class)
+		->autowire()
+		->autoconfigure()->public();
 
 	//熔断器
 	$services->set(\Framework\Middleware\MiddlewareCircuitBreaker::class)
-		->args(['%kernel.project_dir%/storage/cache/'])
+		->args(['%kernel.project_dir%/storage/cache'])
 		->autoconfigure()
 		->public(); 
 	
@@ -390,7 +476,7 @@ return function (ContainerConfigurator $configurator) {
 
 	
 	//批量注册路由中间件
-	$services->load('App\\Middlewares\\', '../app/Middlewares/**/*Middleware.php')
+	$services->load('App\\Middlewares\\', '../app/Middlewares/**/*.php')
 		->autowire()      // 支持中间件的依赖自动注入（如注入UserService）
 		->autoconfigure() // 支持中间件添加标签（如后续需要事件监听）
 		->public(); // 关键：标记为公开，因为中间件需要通过容器动态获取（如从注解解析后）
@@ -398,14 +484,14 @@ return function (ContainerConfigurator $configurator) {
 	#$services->load('App\\', '../app/*/*')->exclude('../app/{Entity,Tests}/*') ->autowire()->autoconfigure();
 	
     // ✅ 自动注册所有 Services（包括 UserService）
-    $services->load('App\\Services\\', '../app/Services/*Service.php')
+    $services->load('App\\Services\\', '../app/Services/**/*.php')
         ->autowire()
         ->autoconfigure()->public(); // 如果你后续要直接 get() 它，才需要 public；否则可省略
 		
 
     // ✅ 自动加载控制器（关键：使用相对路径）
     // 3. 控制器（必须 public！）
-    $services->load('App\\Controllers\\', '../app/Controllers/**/*Controller.php')
+    $services->load('App\\Controllers\\', '../app/Controllers/**/*.php')
         ->autowire()
         ->autoconfigure()->public();
 };
