@@ -4,6 +4,7 @@
 return [
     'log_channel' => 'app',
     'log_path' => __DIR__ . '/../storage/logs',
-    'max_files' => 5,
-    'max_size' => 2000000,	//2MB
+    'logSize' => 5242880,	//5MB 5*1024*1024 =5242880
+    'logKeepDays' => 30,	//30天
+
 ];
