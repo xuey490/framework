@@ -105,7 +105,7 @@ return function (ContainerConfigurator $configurator) {
 
     // === 1. 注册 Redis 客户端（仅当需要时）===
     $services->set('redis.client', \Redis::class)
-        ->factory([RedisFactory::class, 'createRedisClient'])
+        ->factory([\Framework\Utils\RedisFactory::class, 'createRedisClient'])
         ->args([$redisConfig])
         ->public();
 
@@ -162,39 +162,28 @@ return function (ContainerConfigurator $configurator) {
         #->args([new Reference('session.storage')])
         ->public();
 		
-	// 注册 ConfigLoader 为服务
-	$services->set('config' , \Framework\Config\ConfigLoader::class)	//$globalConfig = $this->container->get('config')->loadAll();
-		->args(['%kernel.project_dir%/config'])
-		->public(); // 如果你需要 $container->get(ConfigLoader::class) //print_r($this->container->get(ConfigLoader::class)->loadAll());
+	// 注册 ConfigService 为服务
+	$services->set('config' , \Framework\Config\ConfigService::class)	//$globalConfig = $this->container->get('config')->loadAll();
+		->args([
+		'%kernel.project_dir%/config',
+		'%kernel.project_dir%/storage/cache/config_cache.php'
+		])
+		->public();  //($this->container->get(ConfigService::class)->loadAll());
 		
-    // 🔹 1. 注册 ConfigLoader 业务类
-    $services->set(\Framework\Config\ConfigLoader::class)
-        ->args(['%kernel.project_dir%/config'])
+    // 🔹 1. 注册 ConfigService 业务类
+    $services->set(\Framework\Config\ConfigService::class)
+        ->args([
+			'%kernel.project_dir%/config',
+			'%kernel.project_dir%/storage/cache/config_cache.php'
+			])
         ->public();
 
-    // 🔹 2. 注册 ConfigService 服务类
-    $services->set(\Framework\Config\ConfigService::class)
-        ->public(); // 自动注入 ConfigLoader（autowire 默认开启）
-		
-    // 🔹 3. 注册 LoggerService 服务类
-    $services->set(\Framework\Log\LoggerService::class)
-		->autowire() // 自动注入 ConfigService
-        ->public(); // 允许直接 $container->get()
-
-    // 🔹 4. 注册 Logger 业务类
-    $services->set(\Framework\Log\Logger::class)
-		->args([
-			'app', // channel 名称
-			'%kernel.project_dir%/storage/logs/app.log' // 日志文件路径（可被 ConfigService 替代）
-		])
-        ->public(); // 允许直接 $container->get()
-		
-	// 🔹 5. 别名注册
+	// 🔹 2. 别名注册
 	$services->set('log', \Framework\Log\LoggerService::class)
 		->autowire()	//不带args参数
 		->public();
 	
-	// 🔹 6. 注册异常处理类
+	// 🔹 3. 注册异常处理类
 	$services->set('exception', \Framework\Core\Exception\Handler::class)
 		->autowire()
 		->public();	
@@ -240,21 +229,15 @@ return function (ContainerConfigurator $configurator) {
 	// 注册 RequestStack（用于在工厂中获取当前请求）
 	$services->set(RequestStack::class);
 
-	// i18n 多国语言翻译
+	// 多国语言翻译
 	// 注册 Translator 服务（不设 locale，延迟设置）
-	$services->set('translator1', \Framework\Translation\TranslationService::class)
+	$services->set('translator', \Framework\Translation\TranslationService::class)
 		->args([
 			service(RequestStack::class), // 或 RequestStack::class
 			'%kernel.project_dir%/resource/translations'
 		])
 		->public();
 
-    // 注册翻译助手，传入依赖
-    $services->set('translator', \Framework\Translation\TransHelper::class)
-        ->args([
-            service(RequestStack::class),
-            '%kernel.project_dir%/resource/translations',
-        ])->public();
 
 	//Override
 	$services->set(\Framework\Middleware\MiddlewareMethodOverride::class)
@@ -291,7 +274,14 @@ return function (ContainerConfigurator $configurator) {
 		])
 		->autowire()
 		->public();
-
+	
+	// 注册jwt服务
+	$jwtConfig = require __DIR__ . '/../config/jwt.php';
+	$services->set('jwt' , \Framework\Utils\JwtFactory::class)
+		->args([$jwtConfig])
+		->public();	
+		
+		
     // 加载中间件配置
     $middlewareConfig = require __DIR__ . '/../config/middleware.php';
 
@@ -486,24 +476,3 @@ return function (ContainerConfigurator $configurator) {
         ->autowire()
         ->autoconfigure()->public();
 };
-
-//redis===================
-/**
- * 工厂方法：创建 Redis 客户端
- */
-class RedisFactory {
-    public static function createRedisClient(array $config): \Redis {
-        $redis = new \Redis();
-        $connected = $redis->connect($config['host'], $config['port'], $config['timeout']);
-        if (!$connected) {
-            throw new RuntimeException('Failed to connect to Redis');
-        }
-        if (!empty($config['password'])) {
-            $redis->auth($config['password']);
-        }
-        if (isset($config['database'])) {
-            $redis->select($config['database']);
-        }
-        return $redis;
-    }
-}
