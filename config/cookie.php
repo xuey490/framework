@@ -10,9 +10,9 @@ return [
     // 生成方式：openssl_random_pseudo_bytes(32) 或在线随机字符串生成器
     'secret' => env('COOKIE_SECRET', 'your-32-character-random-secret-key'),
 
-    // Cookie 域名（空表示当前域名）
+    // Cookie 域名（空表示当前域名）本地测试设置为null
     // 子域名共享 Cookie 可设置为 .example.com（注意前缀点）
-    'domain' => env('COOKIE_DOMAIN', ''),
+    'domain' => null , // env('COOKIE_DOMAIN', ''),
 
     // Cookie 路径（默认根路径，所有页面可访问）
     'path' => '/',
