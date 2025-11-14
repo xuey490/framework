@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 /**
- * This file is part of Navaphp Framework.
+ * This file is part of NovaFrame Framework.
  *
- * @link     https://github.com/xuey490/novaphp
- * @license  https://github.com/xuey490/novaphp/blob/main/LICENSE
+ * @link     https://github.com/xuey490/project
+ * @license  https://github.com/xuey490/project/blob/main/LICENSE
  *
  * @Filename: Framework.php
  * @Date: 2025-10-16
@@ -177,6 +177,9 @@ final class Framework
             if ($this->isEasterEggRoute($route)) {
                 return $this->handleEasterEgg($route);
             }
+
+            // 绑定路由到请求
+            $this->request->attributes->set('_route', $route);
 
             // 通过中间件分发执行控制器
             $response = $this->middlewareDispatcher->dispatch(
