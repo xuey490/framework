@@ -32,7 +32,6 @@
 		"intervention/image": "^3.11",
         "lcobucci/clock": "^3.5",
         "lcobucci/jwt": "^5.6",
-		
         "league/commonmark": "^2.6",
         "monolog/monolog": "^3.9.0",
         "ramsey/uuid": "^4.9",
