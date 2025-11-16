@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 /**
- * This file is part of Navaphp Framework.
+ * This file is part of project Framework.
  *
- * @link     https://github.com/xuey490/novaphp
- * @license  https://github.com/xuey490/novaphp/blob/main/LICENSE
+ * @link     https://github.com/xuey490/project
+ * @license  https://github.com/xuey490/project/blob/main/LICENSE
  *
  * @Filename: %filename%
  * @Date: 2025-10-16
@@ -16,15 +16,22 @@ declare(strict_types=1);
 
 namespace Framework\Config;
 
+/*
+* 加载单个文件配置
+*
+* new \Framework\Config\ConfigLoader( $configFile );
+* $data = $ConfigInit->loadAll();
+*/
 class ConfigLoader
 {
     private ?array $cachedConfig = null;
+	
+	private string $configDir;
 
     public function __construct(
-        private string $configDir
+        string $configDir
     ) {
-        // 确保路径以 / 结尾（可选）
-        $this->configDir = rtrim($this->configDir, '/\\') . DIRECTORY_SEPARATOR;
+        $this->configDir = $configDir;
     }
 
     /**
@@ -37,12 +44,10 @@ class ConfigLoader
         }
 
         $config = [];
-        $files  = glob($this->configDir . '*.php');
-
-        foreach ($files as $file) {
-            $key          = basename($file, '.php');
-            $config[$key] = require $file;
-        }
+		
+		if(file_exists($this->configDir)&& is_file($this->configDir)){
+			$config = require $this->configDir;
+		}
 
         return $this->cachedConfig = $config;
     }
