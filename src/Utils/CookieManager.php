@@ -231,41 +231,6 @@ class CookieManager
         return $this->encrypt ? $this->decryptValue($arr['data']) : $arr['data'];
     }
 
-    //--------------------------------------
-    // 加密 + 签名 + 封装
-    //--------------------------------------
-
-    protected function encodePayload(string $value): string
-    {
-        $data = $this->encrypt ? $this->encryptValue($value) : $value;
-        $sig  = $this->sign($data);
-
-        $json = json_encode(['data' => $data, 'sig' => $sig], JSON_UNESCAPED_SLASHES);
-
-        // 全流程统一 URL-safe Base64
-        return $this->base64url_encode($json);
-    }
-
-    protected function decodePayload(string $payload): ?string
-    {
-        $json = $this->base64url_decode($payload);
-        if (!$json) {
-            return null;
-        }
-
-        $arr = json_decode($json, true);
-        if (!is_array($arr) || !isset($arr['data'], $arr['sig'])) {
-            return null;
-        }
-
-        if (!$this->verify($arr['data'], $arr['sig'])) {
-            return null;
-        }
-
-        return $this->encrypt ? $this->decryptValue($arr['data']) : $arr['data'];
-    }
-
-
     // ------------------------ 内部加密/签名方法 ------------------------
     /*
     // 加密（AES-128-GCM）

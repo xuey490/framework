@@ -24,7 +24,7 @@ class ConfigService
 
     private int $cacheTtl = 60;            // 缓存有效期（秒）
 
-    private array $excludedFiles = ['routes.php', 'services.php']; // ❗ 不参与缓存的配置文件名
+    private array $excludedFiles = ['routes.php', 'services.php', 'storage.php']; // ❗ 不参与缓存的配置文件名
 
     public function __construct(
         private string $configDir,
