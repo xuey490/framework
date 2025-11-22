@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * This file is part of NavaFrame Framework.
+ * This file is part of FssPhp Framework.
  *
  * @link     https://github.com/xuey490/project
  * @license  https://github.com/xuey490/project/blob/main/LICENSE
@@ -156,23 +156,6 @@ class MiddlewareDispatcher
         if (! $controller || ! $action) {
             return [];
         }
-
-        /*
-        Array
-        (
-            [controller] => App\Controllers\Admins
-            [middleware] => Array
-                (
-                )
-
-            [method] => legacyAdmin
-            [params] => Array
-                (
-                )
-
-        )
-        */
-
         try {
             // 🧠 支持 "App\Controllers\Admins@legacyAdmin" 这种形式
             if (str_contains($controller, '@')) {

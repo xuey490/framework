@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * This file is part of NavaFrame Framework.
+ * This file is part of FssPhp Framework.
  *
  * @link     https://github.com/xuey490/project
  * @license  https://github.com/xuey490/project/blob/main/LICENSE
@@ -129,8 +129,8 @@ class Kernel
         set_exception_handler(function (\Throwable $e) use ($exceptionHandler) {
             $exceptionHandler->report($e);
             $exceptionHandler->render($e); // ->send();
-            return ;
-			//exit(1); // 异常后终止程序
+            //return ;
+			exit(1); // 异常后终止程序
         });
 
         // 2. 注册错误处理器（将错误转为异常）
@@ -155,8 +155,8 @@ class Kernel
                 );
                 $exceptionHandler->report($e);
                 $exceptionHandler->render($e)->send();
-                return ;
-				//exit(1);
+                //return ;
+				exit(1);
             }
         });
     }
