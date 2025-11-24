@@ -8,106 +8,302 @@ declare(strict_types=1);
  * @link     https://github.com/xuey490/project
  * @license  https://github.com/xuey490/project/blob/main/LICENSE
  *
- * @Filename: %filename%
+ * @Filename: DebugMiddleware.php
  * @Date: 2025-11-15
  * @Developer: xuey863toy
  * @Email: xuey863toy@gmail.com
  */
-
+ 
 namespace Framework\Middleware;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * DebugMiddleware.
- *
- * 调试中间件（仅在 debug 模式启用）：
- *  - 打印 Request Headers、Query、Body 参数
- *  - 打印 Response Headers 与状态码
- *  - 自动检测运行环境（FPM / Workerman）
- *  - 支持 PSR-15 风格中间件（handle/next）
- */
-class DebugMiddleware
+class DebugMiddleware implements MiddlewareInterface
 {
     /** @var bool 是否启用调试输出 */
     protected bool $debug;
 
     public function __construct(bool $debug = true)
     {
-        $this->debug = $debug;
+        $this->debug = $debug ?? false ;
     }
 
     /**
      * 中间件入口.
      */
-    public function handle(Request $request, \Closure $next): Response
+    public function handle(Request $request, callable $next): Response
     {
-        // === 请求阶段 ===
+        $requestDebugInfo = '';
         if ($this->debug) {
-            $this->dumpRequest($request);
+            $requestDebugInfo = $this->dumpRequest($request);
         }
 
         // === 执行下一个中间件 / 控制器 ===
         $response = $next($request);
 
         // === 响应阶段 ===
+        $responseDebugInfo = '';
+        $frameworkDebugInfo = ''; // [NEW] 为框架信息初始化变量
         if ($this->debug) {
-            $this->dumpResponse($response);
+            // 收集响应信息
+            $responseDebugInfo = $this->dumpResponse($response);
+            
+            // [NEW] 收集框架运行时信息
+            $frameworkDebugInfo = $this->dumpFrameworkInfo();
+			
+
+            // 检查响应是否应该注入 Debug 面板
+            $body = (string) $response->getContent();
+            $contentType = $response->headers->get('Content-Type', '');
+
+            // 更可靠的 HTML 检测
+			// [MODIFIED] 更可靠的 HTML 检测，并明确排除 JSON
+			$isHtml = false;
+			
+
+			if (stripos($body, '<html') !== false || 
+				stripos($body, '</body>') !== false || 
+				stripos($body, '<div') !== false || 
+				stripos($body, '<h') !== false || 
+				stripos($body, '<span') !== false 
+			) 
+			{
+				$isHtml = true;
+			}
+            
+            // [MODIFIED] 只有在 $isHtml 为 true 并且有 *任何* 调试内容时才注入
+            if ( $isHtml && ($requestDebugInfo || $responseDebugInfo || $frameworkDebugInfo)) {
+                
+                // [MODIFIED] 构建美化且可折叠的 HTML，传入新信息
+                $debugHtml = $this->buildDebugPanel($requestDebugInfo, $responseDebugInfo, $frameworkDebugInfo);
+                
+                // 注入到 </body> 标签前
+                $pos = strripos($body, '</body>');
+                if ($pos !== false) {
+                    $body = substr_replace($body, $debugHtml . '</body>', $pos, strlen('</body>'));
+                } else {
+                    $body .= $debugHtml; // 回退
+                }
+
+                $response->setContent($body);
+            }
         }
 
         return $response;
     }
 
     /**
-     * 打印请求信息.
+     * [MODIFIED] 构建美化的、默认折叠的 Debug 面板 HTML.
+     *
+     * @param string $requestInfo
+     * @param string $responseInfo
+     * @param string $frameworkInfo [NEW] 新增框架信息参数
+     * @return string
      */
-    protected function dumpRequest(Request $request): void
+    protected function buildDebugPanel(string $requestInfo, string $responseInfo, string $frameworkInfo): string
     {
-        echo "\n==================== [REQUEST DEBUG] ====================\n";
-        echo 'Method: ' . $request->getMethod() . "\n";
-        echo 'Path:   ' . $request->getPathInfo() . "\n";
-        echo 'Client: ' . $request->getClientIp() . "\n";
+		
+        // --- 内联 CSS 样式 ---
+        $styles = [
+            'container' => 'clear:both; background-color:#1e1e1e; border-top:3px solid #007acc; margin:15px 0; font-family:Consolas, Menlo, Courier, monospace; font-size:13px; z-index:99998; position:relative; line-height:1.6; text-align:left;',
+            'main_details' => 'border:1px solid #444; border-top:0; background-color:#252526; color:#d4d4d4;',
+            'main_summary' => 'padding:10px 15px; cursor:pointer; font-weight:bold; background-color:#333337; color:#00a3ff; font-size:16px; list-style:revert; list-style-position:inside;',
+            'content_wrapper' => 'padding:15px; background-color:#1e1e1e;',
+            'inner_details'   => 'margin-bottom:10px; background-color:#252526; border:1px solid #444; border-radius:4px; overflow:hidden;',
+            'inner_summary'   => 'padding:10px; cursor:pointer; font-weight:bold; background-color:#333337; list-style-position:inside;',
+            'summary_req'     => 'color:#9cdcfe;', // 蓝色
+            'summary_fw'      => 'color:#b5cea8;', // [NEW] 绿色
+            'summary_res'     => 'color:#c586c0;', // [NEW] 紫色
+            'pre'             => 'padding:15px; margin:0; background-color:#1e1e1e; white-space:pre-wrap; word-wrap:break-word; border-top:1px solid #444; font-family:inherit; font-size:inherit; color:#d4d4d4;',
+        ];
+        // --- 结束 CSS ---
 
-        echo "\n--- Headers ---\n";
+        // [NEW] 动态样式，用于移除 *最后一个* 面板的 margin-bottom
+        $reqStyle = $fwStyle = $resStyle = $styles['inner_details'];
+        if ($responseInfo) {
+            $resStyle = rtrim($resStyle, ' margin-bottom:10px;');
+        } elseif ($frameworkInfo) {
+            $fwStyle = rtrim($fwStyle, ' margin-bottom:10px;');
+        } elseif ($requestInfo) {
+            $reqStyle = rtrim($reqStyle, ' margin-bottom:10px;');
+        }
+
+        $requestBlock = '';
+        if ($requestInfo) {
+            $requestBlock = sprintf(
+                '<details open style="%s">
+                    <summary style="%s %s">Request Info</summary>
+                    <pre style="%s">%s</pre>
+                </details>',
+                $reqStyle, // [MODIFIED]
+                $styles['inner_summary'],
+                $styles['summary_req'],
+                $styles['pre'],
+                htmlspecialchars($requestInfo, ENT_QUOTES, 'UTF-8')
+            );
+        }
+        
+        // [NEW] 框架信息面板
+        $frameworkBlock = '';
+        if ($frameworkInfo) {
+            $frameworkBlock = sprintf(
+                '<details open style="%s">
+                    <summary style="%s %s">Framework Runtime</summary>
+                    <pre style="%s">%s</pre>
+                </details>',
+                $fwStyle, // [MODIFIED]
+                $styles['inner_summary'],
+                $styles['summary_fw'],
+                $styles['pre'],
+                htmlspecialchars($frameworkInfo, ENT_QUOTES, 'UTF-8')
+            );
+        }
+
+        $responseBlock = '';
+        if ($responseInfo) {
+            $responseBlock = sprintf(
+                '<details open style="%s">
+                    <summary style="%s %s">Response Info</summary>
+                    <pre style="%s">%s</pre>
+                </details>',
+                $resStyle, // [MODIFIED]
+                $styles['inner_summary'],
+                $styles['summary_res'],
+                $styles['pre'],
+                htmlspecialchars($responseInfo, ENT_QUOTES, 'UTF-8')
+            );
+        }
+
+        return sprintf(
+            "\n\n" .
+            '<div style="%s">
+                <details style="%s">
+                    <summary style="%s">
+                        🚀 Framework Debug Panel (Click to expand)
+                    </summary>
+                    <div style="%s">
+                        %s
+                        %s
+                        %s
+                    </div>
+                </details>
+            </div>',
+            $styles['container'],
+            $styles['main_details'],
+            $styles['main_summary'],
+            $styles['content_wrapper'],
+            $requestBlock,
+            $frameworkBlock, // [NEW]
+            $responseBlock
+        );
+    }
+
+    /**
+     * [NEW] 收集并格式化框架运行时信息.
+     */
+    protected function dumpFrameworkInfo(): string
+    {
+        $output = "================= [FRAMEWORK RUNTIME] =================\n";
+
+        // 1. 包含的文件
+        $includedFiles = get_included_files();
+        $output .= 'Included Files Count: ' . count($includedFiles) . "\n\n";
+
+        // 2. 加载的类
+        $loadedClasses = get_declared_classes();
+        $userClasses = [];
+        $internalClassesCount = 0;
+
+        foreach ($loadedClasses as $class) {
+            try {
+                $ref = new \ReflectionClass($class);
+                if ($ref->isInternal()) {
+                    $internalClassesCount++;
+                } else {
+                    // 只收集用户定义的类
+                    $userClasses[] = $class;
+                }
+            } catch (\Throwable $e) {
+                // 捕获异常，例如 ReflectionClass 无法处理匿名类
+                $internalClassesCount++; // 算作内部或无法处理的类
+            }
+        }
+        
+        $userClassesCount = count($userClasses);
+        $totalClassesCount = $userClassesCount + $internalClassesCount;
+
+        $output .= 'Total Loaded Classes: ' . $totalClassesCount . "\n";
+        $output .= 'User-Defined Classes: ' . $userClassesCount . "\n";
+        $output .= 'PHP Internal Classes: ' . $internalClassesCount . "\n";
+
+
+
+
+        // 3. 列出用户定义的类
+        $output .= "\n--- User-Defined Class List (" . $userClassesCount . ") ---\n";
+		
+
+        if (empty($userClasses)) {
+            $output .= "(none)\n";
+        } else {
+            sort($userClasses); // 按字母排序
+			array_pop($userClasses);
+            //$output .= implode("\n", $userClasses) . "\n"; // 不输出类
+        }
+		
+		#dump($userClasses);
+        
+        $output .= "==========================================================\n\n";
+        return $output;
+    }
+
+
+    /**
+     * 打印请求信息.
+     * (保持不变，返回 string)
+     */
+    protected function dumpRequest(Request $request): string
+    {
+        // ... (此方法代码与上一版完全相同) ...
+        $output = "==================== [REQUEST DEBUG] ====================\n";
+        $output .= 'Method: ' . $request->getMethod() . "\n";
+        $output .= 'Path:   ' . $request->getPathInfo() . "\n";
+        $output .= 'Client: ' . $request->getClientIp() . "\n";
+        $output .= "\n--- Headers ---\n";
         foreach ($request->headers->all() as $key => $values) {
-            echo sprintf("%s: %s\n", $key, implode(', ', $values));
+            $output .= sprintf("%s: %s\n", $key, implode(', ', $values));
         }
-
-        echo "\n--- Query Params ---\n";
-        if ($request->query->all()) {
-            print_r($request->query->all());
-        } else {
-            echo "(none)\n";
-        }
-
-        echo "\n--- POST Body ---\n";
+        $output .= "\n--- Query Params ---\n";
+        $output .= $request->query->all() ? print_r($request->query->all(), true) : "(none)\n";
+        $output .= "\n--- POST Body ---\n";
         if ($request->request->all()) {
-            print_r($request->request->all());
+            $output .= print_r($request->request->all(), true);
         } elseif ($raw = $request->getContent()) {
-            echo $raw . "\n";
+            $output .= $raw . "\n";
         } else {
-            echo "(empty)\n";
+            $output .= "(empty)\n";
         }
-
-        echo "==========================================================\n\n";
+        $output .= "==========================================================\n\n";
+        return $output;
     }
 
     /**
      * 打印响应信息.
+     * (保持不变，返回 string)
      */
-    protected function dumpResponse(Response $response): void
+    protected function dumpResponse(Response $response): string
     {
-        echo "\n==================== [RESPONSE DEBUG] ====================\n";
-        echo 'Status: ' . $response->getStatusCode() . "\n";
-
-        echo "\n--- Headers ---\n";
+        // ... (此方法代码与上一版完全相同) ...
+        $output = "\n==================== [RESPONSE DEBUG] ====================\n";
+        $output .= 'Status: ' . $response->getStatusCode() . "\n";
+        $output .= "\n--- Headers ---\n";
         foreach ($response->headers->allPreserveCase() as $key => $values) {
             foreach ($values as $v) {
-                echo sprintf("%s: %s\n", $key, $v);
+                $output .= sprintf("%s: %s\n", $key, $v);
             }
         }
-
-        echo "==========================================================\n\n";
+        $output .= "==========================================================\n\n";
+        return $output;
     }
 }

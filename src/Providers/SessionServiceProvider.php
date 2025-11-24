@@ -39,9 +39,11 @@ final class SessionServiceProvider implements ServiceProviderInterface
     {
         $services = $configurator->services();
 
+		$load =  new \Framework\Config\ConfigService(config_path());
+
         // === 1. 加载配置 ===
-        $redisConfig   = require \dirname(__DIR__, 2) . '/config/redis.php';
-        $sessionConfig = require \dirname(__DIR__, 2) . '/config/session.php';
+        $redisConfig   = $load->get('redis');  //require \dirname(__DIR__, 2) . '/config/redis.php';
+        $sessionConfig = $load->get('session'); //require \dirname(__DIR__, 2) . '/config/session.php';
 
         $storageType     = $sessionConfig['storage_type']          ?? 'file';
         $sessionOptions  = $sessionConfig['options']               ?? [];
@@ -50,7 +52,7 @@ final class SessionServiceProvider implements ServiceProviderInterface
         $ttl             = $sessionConfig['redis']['ttl']          ?? 3600;
 
         // === 2. 注册 Redis 客户端（只有 Redis 模式需要）===
-        if (in_array($storageType, ['redis', 'redis_grouped'], true)) {
+        //if (in_array($storageType, ['redis', 'redis_grouped'], true)) {
             // 注册 RedisFactory 服务
             $services->set('redis.client', \Redis::class)
                 ->factory([RedisFactory::class, 'createRedisClient']) // 工厂方法放在自身
@@ -61,7 +63,7 @@ final class SessionServiceProvider implements ServiceProviderInterface
             $services
                 ->alias('redis', 'redis.client')
                 ->public();
-        }
+        //}
 
         // === 3. 注册 Session Handler & Storage ===
         switch ($storageType) {
@@ -104,17 +106,17 @@ final class SessionServiceProvider implements ServiceProviderInterface
             case 'file':
             default:
                 // ✅ 文件存储（自定义 FileSessionHandler）
-                $services->set('session.handler.custom_file', FileSessionHandler::class)
+                $services->set('session.handler', FileSessionHandler::class)
                     ->call('setSavePath', [$fileSavePath])
                     ->call('setPrefix', [$sessionOptions['name'] ?? 'sess'])
                     ->public();
 
-                $services->set('session.handler', StrictSessionHandler::class)
-                    ->args([service('session.handler.custom_file')])
+                $services->set('session.handler.strict', StrictSessionHandler::class)
+                    ->args([service('session.handler')])
                     ->public();
 
                 $services->set('session.storage', NativeSessionStorage::class)
-                    ->args([$sessionOptions, service('session.handler')])
+                    ->args([$sessionOptions, service('session.handler.strict')])
                     ->public();
                 break;
         }

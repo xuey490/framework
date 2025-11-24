@@ -7,8 +7,6 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
-use Framework\Container\ContainerProviders;
-
 
 
 return function (ContainerConfigurator $configurator) {
@@ -28,6 +26,27 @@ return function (ContainerConfigurator $configurator) {
 	// 注册事件分发
     $services->set(\Framework\Event\Dispatcher::class)
         ->arg('$container', service('service_container'))->public(); // ✅ 显式注入容器自身 注意arg，跟args差异
+
+
+	$databseConfig  = require BASE_PATH . '/config/database.php';
+	$engine = $databseConfig['engine'];
+	
+	// === 再进行 class_alias 切换 ORM Model ===
+	if ($engine === 'eloquent') {
+		class_alias(
+			\Illuminate\Database\Eloquent\Model::class,
+			\Framework\Utils\BaseModel::class,
+			true
+		);
+	}
+
+	if ($engine === 'think') {
+		class_alias(
+			\think\Model::class,
+			\Framework\Utils\BaseModel::class,
+			true
+		);
+	}	 
 
 
 	//$databseConfig  = require BASE_PATH . '/config/database.php';
@@ -55,7 +74,7 @@ return function (ContainerConfigurator $configurator) {
 	
 
     // ✅ 1. 自动加载应用 Provider
-    $providerManager = new ContainerProviders();
+    $providerManager = new \Framework\Container\ContainerProviders();
 
 	// ✅ 2. 自动加载核心 + 应用 Provider
 	$providerManager->loadAll(
@@ -68,6 +87,11 @@ return function (ContainerConfigurator $configurator) {
 
     // ✅ 3. 启动所有 Provider（boot）
 	\Framework\Container\Container::setProviderManager($providerManager);
+	
+	
+	
+
+
 
 	/*
     // 工厂服务 0.4.1 版本使用
