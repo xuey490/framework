@@ -31,6 +31,7 @@ use Framework\Security\CsrfTokenManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 final class MiddlewaresProvider implements ServiceProviderInterface
 {
@@ -57,7 +58,8 @@ final class MiddlewaresProvider implements ServiceProviderInterface
 
         // 熔断器
         $services->set(CircuitBreakerMiddleware::class)
-            ->args(['%kernel.project_dir%/storage/cache'])
+            //->args(['%kernel.project_dir%/storage/cache'])
+            ->args([service('redis'), 5, 10, 'default'])
             ->autoconfigure()
             ->public();
 
@@ -75,11 +77,7 @@ final class MiddlewaresProvider implements ServiceProviderInterface
             ->autowire()
             ->public();
 
-        // 注册debug中间件 默认不启动
-        $services->set(DebugMiddleware::class)
-            ->args([false])
-            ->autowire()
-            ->public();
+
 
         // 加载中间件配置
         $middlewareConfig = require BASE_PATH . '/config/middleware.php';
@@ -89,7 +87,8 @@ final class MiddlewaresProvider implements ServiceProviderInterface
             $services->set(RateLimitMiddleware::class)
                 ->args([
                     $middlewareConfig['rate_limit'],
-                    '%kernel.project_dir%/storage/cache/',
+                    service('redis'),
+					//'%kernel.project_dir%/storage/cache/',
                 ])
                 ->autoconfigure()
                 ->public();
@@ -127,6 +126,13 @@ final class MiddlewaresProvider implements ServiceProviderInterface
                 ])
                 ->public();
         }
+		
+		
+        // 注册debug中间件 默认不启动
+        $services->set(DebugMiddleware::class)
+            ->args([$middlewareConfig['debug']['enabled']])
+            ->autowire()
+            ->public();		
     }
 
     public function boot(ContainerInterface $container): void
