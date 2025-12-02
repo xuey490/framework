@@ -49,6 +49,7 @@
         "symfony/finder": "^7.3",
         "symfony/http-foundation": "^7.3",
         "symfony/http-kernel": "^7.3",
+        "symfony/mime": "^7.4",		
         "symfony/routing": "^7.3",
         "symfony/translation": "^7.3",
 		"symfony/filesystem": "^7.3",
@@ -60,7 +61,7 @@
         "vlucas/valitron": "^1.4",
 		"vlucas/phpdotenv": "5.5",
         "workerman/workerman": "^5.1",
-        "xuey490/storage": "^1.1.0"
+        "xuey490/storage": "^1.1.1"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.88",
