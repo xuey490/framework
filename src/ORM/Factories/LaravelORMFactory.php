@@ -32,65 +32,6 @@ class LaravelORMFactory
 
     private ?Model $modelInstance = null;
 
-    private function splitWhere(array $where): array
-    {
-        $special = [];
-        foreach ($where as $key => $condition) {
-            if (is_array($condition) && count($condition) === 3) {
-                $op = strtolower($condition[1]);
-                if ($op === 'in' || $op === 'not in') {
-                    $special[] = $condition;
-                    unset($where[$key]);
-                }
-            }
-        }
-        return [$where, $special];
-    }
-
-    private function applyConditions(Builder $query, array $where): void
-    {
-        [$normal, $special] = $this->splitWhere($where);
-        if (!empty($normal)) {
-            $query->where($normal);
-        }
-        foreach ($special as $condition) {
-            if (empty($condition[2])) {
-                continue;
-            }
-            $operator = strtolower($condition[1]);
-            $value = Arr::normalize($condition[2]);
-            if ($operator === 'in') {
-                $query->whereIn($condition[0], $value);
-            } elseif ($operator === 'not in') {
-                $query->whereNotIn($condition[0], $value);
-            }
-        }
-    }
-
-    private function buildQuery(array $where = []): Builder
-    {
-        $query = $this->getModel()->query();
-        if (!empty($where)) {
-            $this->applyConditions($query, $where);
-        }
-        return $query;
-    }
-
-    private function applyFields(Builder $query, array|string $field): void
-    {
-        $isWildcard = ($field === '*' || ($field === ['*']));
-        if ($isWildcard) {
-            return;
-        }
-        if (is_array($field)) {
-            $field = array_filter($field, function ($f) { return !empty($f); });
-            $field = implode(',', $field);
-        }
-        if (!empty($field)) {
-            $query->selectRaw($field);
-        }
-    }
-
     /**
      * 构造函数.
      * @param Model|string|null $model 模型类名或实例
@@ -123,6 +64,67 @@ class LaravelORMFactory
             return $this->modelInstance;
         } catch (Throwable $e) {
             throw new Exception('模型加载失败: ' . $e->getMessage());
+        }
+    }
+
+    private function splitWhere(array $where): array
+    {
+        $special = [];
+        foreach ($where as $key => $condition) {
+            if (is_array($condition) && count($condition) === 3) {
+                $op = strtolower($condition[1]);
+                if ($op === 'in' || $op === 'not in') {
+                    $special[] = $condition;
+                    unset($where[$key]);
+                }
+            }
+        }
+        return [$where, $special];
+    }
+
+    private function applyConditions(Builder $query, array $where): void
+    {
+		
+        [$normal, $special] = $this->splitWhere($where);
+        if (!empty($normal)) {
+            $query->where($normal);
+        }
+        foreach ($special as $condition) {
+            if (empty($condition[2])) {
+                continue;
+            }
+            $operator = strtolower($condition[1]);
+            $value = Arr::normalize($condition[2]);
+            if ($operator === 'in') {
+                $query->whereIn($condition[0], $value);
+            } elseif ($operator === 'not in') {
+                $query->whereNotIn($condition[0], $value);
+            }
+        }
+    }
+
+    private function buildQuery(array $where = []): Builder
+    {
+		
+        $query = $this->getModel()->query();
+        if (!empty($where)) {
+            $this->applyConditions($query, $where);
+        }
+        return $query;
+    }
+
+    private function applyFields(Builder $query, array|string $field): void
+    {
+        $isWildcard = ($field === '*' || ($field === ['*']));
+        if ($isWildcard) {
+            return;
+        }
+        if (is_array($field)) {
+            $field = array_filter($field, function ($f) { return !empty($f); });
+            $field = implode(',', $field);
+        }
+        if (!empty($field)) {
+            $query->selectRaw($field);
         }
     }
 
@@ -794,7 +796,7 @@ class LaravelORMFactory
      * @return bool
      * @throws Exception
      */
-    public function bcInc(mixed $key, string $incField, string $inc, string $keyField = null, int $acc = 2): bool
+    public function bcInc(mixed $key, string $incField, string $inc, ?string $keyField = null, int $acc = 2): bool
     {
         // 获取模型实例
         $model = $this->getModel();
@@ -814,7 +816,7 @@ class LaravelORMFactory
      * @return bool
      * @throws ReflectionException
      */
-    public function bcDec($key, string $decField, string $dec, string $keyField = null, int $acc = 2): bool
+    public function bcDec($key, string $decField, string $dec, ?string $keyField = null, int $acc = 2): bool
     {
         return $this->bc($key, $decField, $dec, $keyField, 2, $acc);
     }
@@ -832,7 +834,7 @@ class LaravelORMFactory
      * @return bool
      * @throws ReflectionException
      */
-    public function bc($key, string $field, string $value, string $keyField = null, int $type = 1, int $acc = 2): bool
+    public function bc($key, string $field, string $value, ?string $keyField = null, int $type = 1, int $acc = 2): bool
     {
         // 获取记录
         $result = $keyField === null ? $this->get($key) : $this->getOne([$keyField => $key]);

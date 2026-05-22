@@ -15,11 +15,13 @@ return [
         'token_name' => '_token',
         'except' => [
             '/api/*',
+            '/admin/*',
+            '/Admin/*',
             '/webhook/*',
             '/payment/notify'
         ],
         'error_message' => '请求无效，请刷新页面后重试。',
-        'remove_after_validation' => true, // 用完即焚
+        'remove_after_validation' => false, // 用完即焚
     ],
 
 	// Referer配置
@@ -34,6 +36,8 @@ return [
         'allowed_schemes' => ['http', 'https'],
         'except' => [
             '/api/*',
+            '/admin/*',
+            '/Admin/*',
             '/payment/*'
         ],
         'strict' => false, // false = 允许空 Referer（如隐私模式）
@@ -47,6 +51,8 @@ return [
 		'period'	=> 60,  //60秒
         'except' => [
             '/api/*',
+            '/admin/*',
+            '/Admin/*',
             '/webhook/*',
             '/payment/notify'
         ],		
@@ -55,6 +61,19 @@ return [
 	'debug'	=> [
 		'enabled' => env('APP_DEBUG' , true),
 	],
+
+    // 测试环境写操作保护（拦截 POST/PUT/PATCH/DELETE）
+    'test_env_write_guard' => [
+        'enabled' => true,
+        'only_envs' => ['test', 'testing'],
+        'block_methods' => ['POST', 'PUT', 'PATCH', 'DELETE'],
+        'whitelist' => [
+            '/api/core/login',
+            '/api/core/logout',
+            '/api/core/refresh',
+            '/api/core/captcha*',
+        ],
+    ],
 
     // 可扩展其他中间件
     // 'rate_limit' => [...]

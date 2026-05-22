@@ -1,6 +1,6 @@
 <?php
 return [
-	'engine'	=> 'thinkORM' , //env('ORM_DRIVER') ?? 'thinkORM' , // 'thinkORM' or 'laravelORM'
+	'engine'	=> 'laravelORM' , //env('ORM_DRIVER') ?? 'thinkORM' , // 'thinkORM' or 'laravelORM'
     // 默认使用的数据库连接配置
     'default'         => 'mysql',
     // 自定义时间查询规则
@@ -15,7 +15,7 @@ return [
     'connections'     => [
         'mysql' => [
 			//Illuminate\Database driver必须指定
-			//'driver' => 'mysql',
+			#'driver' => 'mysql',
             // 数据库类型
             'type'               =>  'mysql',
             // 服务器地址 // ThinkORM 可定义多个别名
@@ -23,7 +23,7 @@ return [
             //Illuminate\Database host必须指定
 			//'host'     			 =>  '127.0.0.1',  
             // 数据库名
-            'database'           =>  'oa',
+            'database'           =>  'fssoa',
             // 用户名
             'username'           =>  'root',
             // 密码
@@ -31,7 +31,7 @@ return [
             // 端口
             'hostport'           =>  '3306',
             // 数据库表前缀
-            'prefix'             =>  'oa_',
+            'prefix'             =>  '',
             // 数据库连接参数
             'params'          => [],
             // 数据库编码默认采用utf8mb4
