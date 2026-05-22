@@ -46,7 +46,7 @@ final class ResponseProvider implements ServiceProviderInterface
             ->set('response1' , Response::class)
             ->args(['', Response::HTTP_OK, []])
             ->public();
-
+		
         $services
             ->set('response2' , Response::class)
             ->class(Response::class)

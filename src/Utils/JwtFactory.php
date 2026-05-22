@@ -101,71 +101,106 @@ class JwtFactory
         ];
     }
 
+	// 最底层：parseRaw（只负责“这是不是我签的 JWT”）
+	protected function parseRaw(string $token): Plain
+	{
+		$token = trim($token);
+
+		if (
+			substr_count($token, '.') !== 2 ||
+			! preg_match('/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/', $token)
+		) {
+			throw new \InvalidArgumentException('Invalid JWT format.');
+		}
+
+		$parsed = $this->config->parser()->parse($token);
+
+		// 只校验签名是否合法
+		$ok = $this->config->validator()->validate(
+			$parsed,
+			new SignedWith($this->config->signer(), $this->config->verificationKey())
+		);
+
+		if (! $ok) {
+			throw new \RuntimeException('JWT signature verification failed.');
+		}
+
+		return $parsed;
+	}
+
+	// API 请求用：parseForAccess（最严格）
+	public function parseForAccess(string $token): Plain
+	{
+		$parsed = $this->parseRaw($token);
+
+		// 1️⃣ 黑名单优先（防止并发 / 重放）
+		if ($this->isBlacklisted($parsed)) {
+			throw new \RuntimeException('Token has been revoked.');
+		}
+
+		// 2️⃣ exp 校验
+		$exp = $parsed->claims()->get('exp');
+		if (! $exp instanceof \DateTimeImmutable || $exp < new \DateTimeImmutable()) {
+			throw new \RuntimeException('Token expired.');
+		}
+
+		// 3️⃣ Redis 活跃校验（是否被提前注销）
+		$jti = $parsed->claims()->get('jti');
+		if (! $jti || ! app('redis.client')->exists("login:token:{$jti}")) {
+			throw new \RuntimeException('Token not active.');
+		}
+
+		// 4️⃣ issuer / nbf / iat 校验
+		$clock = new SystemClock($this->timezone);
+
+		$this->config->validator()->assert(
+			$parsed,
+			new IssuedBy($this->jwtConfig['issuer'] ?? null),
+			new LooseValidAt(
+				$clock,
+				new \DateInterval(
+					'PT' . intval($this->jwtConfig['blacklist_grace_period'] ?? 0) . 'S'
+				)
+			)
+		);
+
+		return $parsed;
+	}
+
+	// 刷新 / 注销用：parseForRefresh（允许过期）
+	public function parseForRefresh(string $token): Plain
+	{
+		$parsed = $this->parseRaw($token);
+
+		// refresh 场景：允许 exp 过期
+		// 但不允许被明确 revoke
+		if ($this->isBlacklisted($parsed)) {
+			throw new \RuntimeException('Token has been revoked.');
+		}
+
+		// issuer / nbf 校验（防伪造）
+		$clock = new SystemClock($this->timezone);
+
+		$this->config->validator()->assert(
+			$parsed,
+			new IssuedBy($this->jwtConfig['issuer'] ?? null),
+			new LooseValidAt(
+				$clock,
+				new \DateInterval('PT0S')
+			)
+		);
+
+		return $parsed;
+	}
+
+	public function parse(string $token): Plain
+	{
+		return $this->parseForAccess($token);
+	}
+
+
     /*
-     * 解析jwt token
-     */
-    public function parse(string $token): Plain
-    {
-        $token = trim($token);
-
-        if (substr_count($token, '.') !== 2 || ! preg_match('/^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$/', $token)) {
-            throw new \InvalidArgumentException('Invalid JWT format.');
-        }
-
-        $parsed = $this->config->parser()->parse($token);
-
-        // 先：检查是否被加入黑名单（优先）
-        if ($this->isBlacklisted($parsed)) {
-            throw new \RuntimeException('Token has been revoked.');
-        }
-
-        // 额外：检查是否在 Redis 中存在（即未被提前注销）
-        $jti = $parsed->claims()->get('jti');
-        if ($jti && ! app('redis.client')->exists("login:token:{$jti}")) {
-            throw new \RuntimeException('Token not active or already expired.');
-        }
-
-        // 通过 jti 查 user_id（可选用以返回或验证用户）
-        $userId = $jti ? app('redis.client')->get("login:token:{$jti}") : null;
-        if (! $userId) {
-            // 如果没有映射且未被列入黑名单，上面已经处理；这里再保守一点抛错。
-            throw new \RuntimeException('Token invalid or expired.');
-        }
-
-        $verify = [
-            new SignedWith($this->config->signer(), $this->config->verificationKey()),
-        ];
-
-        // ✅ 验证签名是否合法
-        $ok = $this->config->validator()->validate($parsed, ...$verify);
-        if (! $ok) {
-            throw new \Exception('Token verfiy failed');
-        }
-
-        // 验证过期时间
-        $exp = $parsed->claims()->get('exp', null);
-        if ($exp instanceof \DateTimeImmutable && $exp < new \DateTimeImmutable()) {
-            throw new \Exception('Token was expired');
-        }
-
-        // SystemClock 需要时区
-        $clock = new SystemClock(new \DateTimeZone(config('app.time_zone') ?? 'Asia/Shanghai'));
-
-        $constraints = [
-            new IssuedBy($this->jwtConfig['issuer'] ?? null),
-            new LooseValidAt(
-                $clock,
-                new \DateInterval('PT' . intval($this->jwtConfig['blacklist_grace_period'] ?? 0) . 'S')
-            ),
-        ];
-
-        $this->config->validator()->assert($parsed, ...$constraints);
-
-        return $parsed;
-    }
-
-    /*
-     * 刷新jwt token
+     * 刷新jwt token 可以弃用
      */
     public function refresh(string $token, ?int $ttl = null): string
     {
@@ -235,6 +270,62 @@ class JwtFactory
             }
         }
     }
+	
+	/*
+	* 生成 Refresh Token
+	*/
+	public function issueRefreshToken(int $userId, int $ttl = 604800): string
+	{
+		$refreshToken = bin2hex(random_bytes(64));
+		$hash         = hash('sha256', $refreshToken);
+
+		$redis = app('redis.client');
+
+		// refresh_token -> user_id
+		$redis->setex("refresh:token:{$hash}", $ttl, (string) $userId);
+
+		// user -> refresh tokens
+		$redis->sadd("user:refresh_tokens:{$userId}", $hash);
+		$redis->expire("user:refresh_tokens:{$userId}", $ttl);
+
+		return $refreshToken;
+	}
+
+	/*
+	* 校验 Refresh Token
+	*/
+	public function validateRefreshToken(string $refreshToken): int
+	{
+		$hash  = hash('sha256', $refreshToken);
+		$redis = app('redis.client');
+
+		$userId = $redis->get("refresh:token:{$hash}");
+		if (! $userId) {
+			throw new \RuntimeException('Invalid or expired refresh token');
+		}
+
+		return (int) $userId;
+	}
+
+	
+	public function rotateRefreshToken(string $oldRefreshToken): string
+	{
+		$hash  = hash('sha256', $oldRefreshToken);
+		$redis = app('redis.client');
+
+		$userId = $redis->get("refresh:token:{$hash}");
+		if (! $userId) {
+			throw new \RuntimeException('Refresh token already used or expired');
+		}
+
+		// 1. 删除旧 token（用完即焚）
+		$redis->del("refresh:token:{$hash}");
+		$redis->srem("user:refresh_tokens:{$userId}", $hash);
+
+		// 2. 生成新 token
+		return $this->issueRefreshToken((int) $userId);
+	}
+
 
     public function revoke(string $token): void
     {
