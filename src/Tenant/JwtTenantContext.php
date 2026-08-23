@@ -50,8 +50,6 @@ final class JwtTenantContext
     /**
      * 默认 Token 有效期（秒）
      */
-    private const DEFAULT_TTL = 7200; // 2小时
-
     /**
      * 刷新 Token 有效期（秒）
      */
@@ -72,22 +70,17 @@ final class JwtTenantContext
      *
      * 使用现有的 JwtFactory::issue() 方法
      *
-     * @param array $userData 用户数据，必须包含：
+     * @param array<mixed> $userData 用户数据，必须包含：
      *   - uid: 用户ID（必须）
      *   - name: 用户名
      *   - tenant_id: 租户ID（可选）
      *   - role: 角色（可选）
      *   - 其他自定义 claims
      * @param int|null $ttl Token 有效期（秒），默认使用 config/jwt.php 中的 ttl
-     * @return array 包含 token、expiresAt、ttl 的数组
+     * @return array<mixed> 包含 token、expiresAt、ttl 的数组
      */
     public static function generateToken(array $userData, ?int $ttl = null): array
     {
-        // 确保 tenant_id 在 claims 中
-        if (!isset($userData['tenant_id']) && isset($userData['tenant_id'])) {
-            $userData['tenant_id'] = $userData['tenant_id'];
-        }
-
         return self::getJwtFactory()->issue($userData, $ttl);
     }
 
@@ -158,7 +151,7 @@ final class JwtTenantContext
      * 从 Token 获取完整用户信息
      *
      * @param string $token JWT Token
-     * @return array|null 用户信息数组，解析失败返回 null
+     * @return array<mixed>|null 用户信息数组，解析失败返回 null
      */
     public static function getUserDataFromToken(string $token): ?array
     {
@@ -350,7 +343,7 @@ final class JwtTenantContext
      * 使用现有的 JwtFactory::getPayload() 方法
      *
      * @param string $token JWT Token
-     * @return array Payload 数组
+     * @return array<mixed> Payload 数组
      */
     public static function getPayload(string $token): array
     {
@@ -376,9 +369,9 @@ final class JwtTenantContext
      *
      * 整合 access token 和 refresh token 生成
      *
-     * @param array $userData 用户数据
+     * @param array<mixed> $userData 用户数据
      * @param int|null $ttl Token 有效期
-     * @return array 包含 token、refresh_token、expires_at 的数组
+     * @return array<mixed> 包含 token、refresh_token、expires_at 的数组
      */
     public static function generateLoginTokens(array $userData, ?int $ttl = null): array
     {
