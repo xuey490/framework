@@ -1,18 +1,17 @@
 #!/usr/bin/env php
 <?php
 
+declare(strict_types=1);
+
 if (PHP_SAPI !== 'cli') {
+    fwrite(STDERR, "This command must be run from the CLI.\n");
     exit(1);
 }
 
-// 项目根目录 = vendor/bin 的上两级
-$projectRoot = dirname(__DIR__, 2);
-//echo $projectRoot."\r\n";
-$autoload = $projectRoot . '/../../vendor/autoload.php';
-//echo $autoload."\r\n";
-if (!file_exists($autoload)) {
-    echo "Error: Composer autoloader not found at $autoload\n";
-    echo "Please run this command from your project root directory after 'composer install'.\n";
+$autoload = nova_find_autoload();
+if ($autoload === null) {
+    fwrite(STDERR, "Error: Composer autoloader not found.\n");
+    fwrite(STDERR, "Run this from your project root after `composer require xuey490/framework`.\n");
     exit(1);
 }
 
@@ -20,13 +19,99 @@ require_once $autoload;
 
 use Framework\Composer\ScriptHandler;
 
-$command = $argv[1] ?? null;
+$arguments = array_slice($argv, 1);
+$command = $arguments[0] ?? 'help';
+$force = in_array('--force', $arguments, true) || in_array('-f', $arguments, true);
+$projectDir = nova_option_value($arguments, '--project-dir') ?? (string) getcwd();
 
 if ($command === 'install') {
-    ScriptHandler::copyDefaultConfig();
-    echo "✅ NovaPHP framework installed successfully!\n";
-    echo "📁 Config files copied to your project root.\n";
-} else {
-    echo "Usage: nova install\n";
-    exit(1);
+    $result = ScriptHandler::install($projectDir, $force);
+    $copied = count($result['copied']);
+    $skipped = count($result['skipped']);
+    $errors = count($result['errors']);
+
+    echo "NovaPHP framework initialized.\n";
+    echo 'Project : ' . $result['projectRoot'] . "\n";
+    echo 'Package : ' . $result['packageRoot'] . "\n";
+    echo "Copied  : {$copied}\n";
+    echo "Skipped : {$skipped} (already exists)\n";
+
+    if ($copied > 0) {
+        foreach ($result['copied'] as $path) {
+            echo '  + ' . $path . "\n";
+        }
+    }
+
+    if ($errors > 0) {
+        echo "Errors  : {$errors}\n";
+        foreach ($result['errors'] as $error) {
+            echo '  ! ' . $error . "\n";
+        }
+        exit(1);
+    }
+
+    echo "Done. Existing files were not overwritten" . ($force ? " (force enabled).\n" : ".\n");
+    echo "Tip: php vendor/bin/nova install --force  to overwrite.\n";
+    exit(0);
+}
+
+echo <<<TXT
+NovaPHP installer
+
+Usage:
+  php vendor/bin/nova install [--force] [--project-dir=PATH]
+
+Linux / macOS:
+  bash vendor/xuey490/framework/install.sh
+  ./vendor/bin/nova install
+
+Windows:
+  vendor\\xuey490\\framework\\install.cmd
+  php vendor\\bin\\nova install
+
+Options:
+  --force, -f          Overwrite existing config / .env / view files
+  --project-dir=PATH   Target project root (defaults to current directory)
+
+TXT;
+exit($command === 'help' ? 0 : 1);
+
+/**
+ * Locate vendor/autoload.php from vendor bin, package bin, or project root.
+ */
+function nova_find_autoload(): ?string
+{
+    $candidates = [
+        dirname(__DIR__) . '/vendor/autoload.php',
+        dirname(__DIR__, 2) . '/autoload.php',
+        dirname(__DIR__, 3) . '/autoload.php',
+        dirname(__DIR__, 2) . '/vendor/autoload.php',
+        getcwd() . '/vendor/autoload.php',
+    ];
+
+    foreach ($candidates as $candidate) {
+        $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $candidate);
+        if (is_file($normalized)) {
+            return $normalized;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * @param list<string> $arguments
+ */
+function nova_option_value(array $arguments, string $name): ?string
+{
+    $prefix = $name . '=';
+    foreach ($arguments as $argument) {
+        if (str_starts_with($argument, $prefix)) {
+            $value = substr($argument, strlen($prefix));
+
+            return $value !== '' ? $value : null;
+        }
+    }
+
+    return null;
 }

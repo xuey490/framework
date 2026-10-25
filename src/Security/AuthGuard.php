@@ -36,10 +36,12 @@ class AuthGuard
 
     /**
      * 验证请求
-     * @return array             用户信息
-     * @throws \RuntimeException 验证失败
+     *
+     * @param array<int, string>|null $requiredRoles
+     *
+     * @return array{id: mixed, role: mixed, exp: int}|Response|null
      */
-    public function check(Request $request, ?array $requiredRoles = null): mixed
+    public function check(Request $request, ?array $requiredRoles = null): array|Response|null
     {
         $token = $this->extractToken($request);
         if (! $token) {
@@ -52,31 +54,24 @@ class AuthGuard
             $claims   = $parsed->claims();
             $userId   = $claims->get('uid');
             $userRole = $claims->get('role') ?? 'user';
-            $exp      = $claims->get('exp')->getTimestamp();
+            $expClaim = $claims->get('exp');
+            $exp      = $expClaim instanceof \DateTimeInterface ? $expClaim->getTimestamp() : (int) $expClaim;
             $now      = time();
 
             // --- 角色验证 ---
-            if ($requiredRoles && ! in_array($userRole, $requiredRoles)) {
+            if ($requiredRoles && ! in_array($userRole, $requiredRoles, true)) {
                 return $this->forbidden("Role '{$userRole}' not allowed");
             }
 
             $remaining = $exp - $now;
             if ($remaining <= 0) {
-                // Token 已过期
                 return null;
             }
 
-            // --- 自动续期 ---
-            $ttl = $exp - $now;
-            if ($ttl < $this->refreshThreshold) {
-                $refreshResult = $this->jwt->refresh($token);
-                $newToken      = is_array($refreshResult)
-                    ? ($refreshResult['token'] ?? null)
-                    : (is_string($refreshResult) ? $refreshResult : null);
+            if ($remaining < $this->refreshThreshold) {
+                $newToken = $this->jwt->refresh($token);
                 $this->refreshedToken = $newToken;
-                if ($newToken) {
-                    $request->attributes->set('_new_token', $newToken);
-                }
+                $request->attributes->set('_new_token', $newToken);
             }
 
             return [

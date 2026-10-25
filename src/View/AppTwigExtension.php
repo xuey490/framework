@@ -26,7 +26,7 @@ class AppTwigExtension extends AbstractExtension
 
     private string $tokenName;
 
-    private $session;
+    private object $session;
 
     public function __construct(CsrfTokenManager $tokenManager, string $tokenName = '_token')
     {

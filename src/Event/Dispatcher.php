@@ -24,7 +24,7 @@ class Dispatcher implements EventDispatcherInterface
 {
     /**
      * 存储监听器：[事件类][优先级][] = 监听器.
-     * @var array<string, array<int, array<array<mixed>|callable|string>>>
+     * @var array<string, array<int, list<array{0: object|string, 1: string}|callable(object): mixed|string>>>
      */
     private array $listeners = [];
 
@@ -188,8 +188,9 @@ class Dispatcher implements EventDispatcherInterface
      *  - 'ServiceName'（自动从容器获取）
      *  - 闭包/匿名函数.
 
-     * @param array<mixed>|callable|string  $listener
-
+     * @param array<mixed>|callable(object): mixed|string $listener
+     *
+     * @return (callable(object): mixed)|null
      */
     private function resolveListener(array|callable|string $listener): ?callable
     {

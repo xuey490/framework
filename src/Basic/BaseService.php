@@ -298,6 +298,7 @@ abstract class BaseService
      * @return mixed 方法返回值
      * @throws \RuntimeException DAO 未初始化时抛出
      * @throws \BadMethodCallException 方法不存在时抛出
+     * @throws \Throwable DAO / ORM 内部其它异常
      */
     public function __call(string $name, array $arguments): mixed
     {
