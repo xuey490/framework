@@ -22,31 +22,15 @@ use App\Services\ExcelExportService;
 use Framework\Utils\Json;
 use Framework\Utils\DateTime;
 use Framework\Utils\Tree;
-use Framework\Basic\BaseController;
-use Framework\Basic\BaseService;
 
 class Crud extends BaseController
 {
-	
-    public static array $prefixes = [
-        'IN_', 'LIKE_', 'PREFIX_', 'EQ_', 'GT_', 'LT', 'GTE_', 'LTE_', 'NE_', 'BETWEEN_'
-    ];
-	
-    public function __construct(
-        ?BaseService $service = null,
-        ?object $validate = null
-    ) {
-		
-        parent::__construct($service, $validate);
-    }
-	
-	
     /**
      * 设置 Request
      *
      * ⚠️ 必须在中间件处理后调用，保证获取的是最新过滤的 Request
-     */	
-    public function setRequest(Request $request)
+     */
+    public function setRequest(Request $request): void
     {
         $this->request = $request;
     }
@@ -58,17 +42,13 @@ class Crud extends BaseController
      */
     public function getRequest(): Request
     {
-        if ($this->request === null) {
-            throw new \RuntimeException('Request 尚未设置，请先调用 setRequest()');
-        }
-
         return $this->request;
     }
 
     /**
      * 获取当前 Service
      */
-    public function getService()
+    public function getService(): object
     {
         return $this->service;
     }
@@ -77,14 +57,14 @@ class Crud extends BaseController
      * 示例通用 GET 方法
      * ⚠️ 控制器动作中应使用 $this->getRequest() 获取 Request
      */
-    protected function getParam(string $key, $default = null): mixed
+    protected function getParam(string $key, mixed $default = null): mixed
     {
-        return $this->getRequest()->query->get($key, $default);
+        return $this->getRequest()->query->get($key) ?? $default;
     }
 
-    protected function postParam(string $key, $default = null): mixed
+    protected function postParam(string $key, mixed $default = null): mixed
     {
-        return $this->getRequest()->request->get($key, $default);
+        return $this->getRequest()->request->get($key) ?? $default;
     }
 	
     /**
@@ -106,6 +86,10 @@ class Crud extends BaseController
             $total = $this->service->getCount($where);
             $list  = $this->service->selectList($where, $field, $page, $limit, $order, [], false);
 
+            if ($formatFunction === 'formatTableTree') {
+                return $this->formatTableTree($list, $total);
+            }
+
             return $this->$formatFunction($list, $total);
         } catch (\Throwable $e) {
             return Json::fail($e->getMessage());
@@ -117,7 +101,7 @@ class Crud extends BaseController
         try {
             [$where, $format, $limit, $field, $order] = $this->selectInput($request);
             $data = $this->service->selectList($where, $field, 0, 99999, $order, [], true);
-            return Json::success('ok', $data);
+            return Json::success($data, 'ok');
         } catch (\Throwable $e) {
             return Json::fail($e->getMessage());
         }
@@ -153,7 +137,7 @@ class Crud extends BaseController
             }
 
             $pk = $model->getPk();
-            return Json::success('ok', [$pk => $model->getAttribute($pk)]);
+            return Json::success([$pk => $model->getAttribute($pk)], 'ok');
         } catch (\Throwable $e) {
             return Json::fail($e->getMessage());
         }
@@ -172,7 +156,7 @@ class Crud extends BaseController
                 throw new \Exception('数据未找到');
             }
 
-            return Json::success('ok', $data->toArray());
+            return Json::success($data->toArray(), 'ok');
         } catch (\Throwable $e) {
             return Json::fail($e->getMessage());
         }
@@ -271,7 +255,7 @@ class Crud extends BaseController
                 $query->chunk(1000, $chunkHandler);
             });
 
-            return Json::success("导出成功", $result);
+            return Json::success($result, "导出成功");
         } catch (\Throwable $e) {
             return Json::fail($e->getMessage());
         }
@@ -284,7 +268,7 @@ class Crud extends BaseController
     {
         try {
             $id = $request->attributes->get('id');
-            $data = $request->request->get('data', []);
+            $data = $request->request->all()['data'] ?? [];
 
             $data = $id ?: $data;
 
@@ -307,7 +291,7 @@ class Crud extends BaseController
                 return $deleted;
             });
 
-            return Json::success("ok", $result);
+            return Json::success($result, "ok");
         } catch (\Throwable $e) {
             return Json::fail($e->getMessage());
         }
@@ -320,7 +304,7 @@ class Crud extends BaseController
     {
         try {
             $id = $request->attributes->get('id');
-            $data = $request->request->get('data', []);
+            $data = $request->request->all()['data'] ?? [];
             $data = $id ?: $data;
 
             if (empty($data)) {
@@ -461,8 +445,10 @@ class Crud extends BaseController
 
     /**
      * 格式化树
+     *
+     * @param array<mixed>|iterable<mixed> $items
      */
-    protected function formatTree($items): Response
+    protected function formatTree($items, int $total = 0): Response
     {
         $nodes = [];
         foreach ($items as $item) {
@@ -474,7 +460,16 @@ class Crud extends BaseController
             ];
         }
         $tree = new Tree($nodes);
-        return Json::success('ok', $tree->getTree());
+
+        return Json::success($tree->getTree(), 'ok');
+    }
+
+    /**
+     * @param array<mixed>|iterable<mixed> $items
+     */
+    protected function formatTableTree($items, int $total = 0): Response
+    {
+        return $this->formatTree($items, $total);
     }
 
 }

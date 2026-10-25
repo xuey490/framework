@@ -10,6 +10,7 @@ parameters:
 	checkMissingCallableSignature: true
 	excludePaths:
 		- %currentWorkingDirectory%/*Test.php
+		- src/Composer/InstallerPlugin.php
 	ignoreErrors:
 		- '#Access to an undefined property [\S\s]+::\$[\S\s]+\.#'
 		- '#should return [\S\s]+ but returns Leevel\\Database\\Ddd\\Entity\.#'
@@ -55,6 +56,7 @@ parameters:
 		- '#extends generic class#'
 		- '#with generic class#'
 		- '#always evaluate to true#'
+		- '#Call to an undefined static method think\\facade\\Db::(query|execute)\(\)#'
 	exceptions:
 		uncheckedExceptionClasses:
 			- 'PHPStan\ShouldNotHappenException'

@@ -60,6 +60,8 @@ class MarkdownExtension extends AbstractExtension
      *
      * @param  string $markdown the Markdown text to convert
      * @return string the converted HTML
+     *
+     * @throws \League\CommonMark\Exception\CommonMarkException
      */
     public function convertMarkdownToHtml(string $markdown): string
     {

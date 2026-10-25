@@ -36,7 +36,7 @@ trait CrudFormatterTrait
      * 
      * @param mixed $list 数据列表
      * @param int $total 数据总条数
-     * @return \Framework\Basic\BaseJsonResponse 格式化后的 JSON 响应对象
+     * @return \Symfony\Component\HttpFoundation\Response 格式化后的 JSON 响应对象
      */
     protected function formatSelect($list, int $total)
     {
@@ -54,7 +54,7 @@ trait CrudFormatterTrait
      * 
      * @param mixed $list 数据列表
      * @param int $total 数据总条数
-     * @return \Framework\Basic\BaseJsonResponse 格式化后的 JSON 响应对象
+     * @return \Symfony\Component\HttpFoundation\Response 格式化后的 JSON 响应对象
      */
     protected function formatNormal($list, int $total)
     {
@@ -72,7 +72,7 @@ trait CrudFormatterTrait
      * 
      * @param array<mixed> $items 待转换的数据项集合，每个项应包含 id 字段，可选 pid 字段
      * @param int $total 数据总条数（与 formatSelect/formatNormal 保持参数一致，便于统一调用）
-     * @return \Framework\Basic\BaseJsonResponse 格式化后的 JSON 响应对象，包含树形结构数据
+     * @return \Symfony\Component\HttpFoundation\Response 格式化后的 JSON 响应对象，包含树形结构数据
      */
     protected function formatTree($items, int $total = 0)
     {

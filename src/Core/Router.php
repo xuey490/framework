@@ -199,10 +199,10 @@ class Router
 
     /**
      * 执行路由匹配
-
+     *
      * @return ?array<mixed>
-    
-
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function match(Request $request): ?array
     {
@@ -723,8 +723,11 @@ class Router
 
     /**
      * 写入缓存
+     *
      * @param array<mixed> $route
- */
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     private function saveToCache(string $key, array $route): void
     {
         if (!$this->cache) {
