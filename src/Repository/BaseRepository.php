@@ -20,7 +20,7 @@ use Framework\Tenant\TenantContext;	//启用租户隔离#
  */
 abstract class BaseRepository implements RepositoryInterface
 {
-    protected string $modelClass;
+    protected string $modelClass = '';
     protected OrmStrategyInterface $ormStrategy;
     protected ?CacheInterface $cache = null; // 改为可空类型并初始化为null
     protected int $cacheTtl = 3600; // 默认缓存过期时间（秒）
@@ -128,6 +128,8 @@ abstract class BaseRepository implements RepositoryInterface
 	// 修改查询方法中的缓存逻辑（增加缓存开关判断）
 	/**
 	* @param array<mixed> $with
+	*
+	* @throws \Psr\SimpleCache\InvalidArgumentException
 	*/
 	public function findById(int|string $id, array $with = []): mixed
 	{
@@ -170,10 +172,12 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 根据条件查找单条记录
-     * @throws DatabaseException
      * @param array<mixed> $criteria
- * @param array<mixed> $with
- */
+     * @param array<mixed> $with
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function findOneBy(array $criteria, array $with = []): mixed
     {
         try {
@@ -199,11 +203,14 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 根据条件查找多条记录
-     * @throws DatabaseException
+     *
      * @param array<mixed> $criteria
- * @param array<mixed> $orderBy
- * @param array<mixed> $with
- */
+     * @param array<mixed> $orderBy
+     * @param array<mixed> $with
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function findAll(array $criteria = [], array $orderBy = [], ?int $limit = null, array $with = []): mixed
     {
         try {
@@ -258,9 +265,12 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 创建记录
-     * @throws DatabaseException
+     *
      * @param array<mixed> $data
- */
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function create(array $data): mixed
     {
         try {
@@ -289,10 +299,13 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 根据ID更新记录
-     * @throws DatabaseException
+     *
      * @param array<mixed> $criteria
- * @param array<mixed> $data
- */
+     * @param array<mixed> $data
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function update(array $criteria, array $data): bool
     {
         try {
@@ -336,10 +349,13 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 按条件批量更新（兼容旧方法，统一参数格式）
-     * @throws DatabaseException
+     *
      * @param array<mixed> $criteria
- * @param array<mixed> $data
- */
+     * @param array<mixed> $data
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function updateBy(array $criteria, array $data): int
     {
         try {
@@ -358,9 +374,12 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 删除记录
-     * @throws DatabaseException
+     *
      * @param array<mixed> $criteria
- */
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function delete(array $criteria): bool
     {
         try {
@@ -392,9 +411,12 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 按条件批量删除（兼容旧方法）
-     * @throws DatabaseException
+     *
      * @param array<mixed> $criteria
- */
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function deleteBy(array $criteria): int
     {
         try {
@@ -415,10 +437,13 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 自增操作
-     * @throws DatabaseException
+     *
      * @param array<mixed> $criteria
- * @param array<mixed> $extra
- */
+     * @param array<mixed> $extra
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function increment(array $criteria, string $field, int $amount = 1, array $extra = []): bool
     {
         try {
@@ -437,10 +462,13 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 自减操作
-     * @throws DatabaseException
+     *
      * @param array<mixed> $criteria
- * @param array<mixed> $extra
- */
+     * @param array<mixed> $extra
+     *
+     * @throws DatabaseException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function decrement(array $criteria, string $field, int $amount = 1, array $extra = []): bool
     {
         try {
@@ -514,8 +542,11 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 原生执行
+     *
      * @param array<mixed> $bindings
- */
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function execute(string $sql, array $bindings = []): int
     {
         try {
@@ -662,6 +693,8 @@ abstract class BaseRepository implements RepositoryInterface
 
     /**
      * 清除缓存
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     protected function clearCache(?string $key = null): void
     {

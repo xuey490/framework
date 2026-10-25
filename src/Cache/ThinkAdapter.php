@@ -72,6 +72,8 @@ class ThinkAdapter extends AbstractCache implements CacheInterface
      * @param mixed  $default 当键不存在时返回的默认值，默认为 null
      * 
      * @return mixed 缓存值，如果键不存在则返回默认值
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function get(string $key, mixed $default = null): mixed
     {
@@ -89,6 +91,8 @@ class ThinkAdapter extends AbstractCache implements CacheInterface
      * @param \DateInterval|int|null $ttl   过期时间，支持秒数或 DateInterval 对象，null 表示使用默认值
      * 
      * @return bool 成功返回 true，失败返回 false
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
     {
@@ -104,6 +108,8 @@ class ThinkAdapter extends AbstractCache implements CacheInterface
      * @param string $key 缓存键名
      * 
      * @return bool 存在返回 true，不存在返回 false
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function has(string $key): bool
     {
@@ -118,6 +124,8 @@ class ThinkAdapter extends AbstractCache implements CacheInterface
      * @param string $key 缓存键名
      * 
      * @return bool 成功返回 true，失败返回 false
+     *
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function delete(string $key): bool
     {
